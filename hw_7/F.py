@@ -1,3 +1,5 @@
+import sys, threading
+
 n, m = [int(i) for i in input().split(' ')]
 fines = []
 visited = []
@@ -22,11 +24,22 @@ def change_value(row: int, col: int):
         fines[row][col] = min(find_min_curr(row-1, col), find_min_curr(row, col-1)) + fines[row][col]
 
 
-def find_min_curr(row: int, col: int) -> int:
+def find_min_curr(row: int, col: int):
     if visited[row][col]:
         return fines[row][col]
     else:
         change_value(row, col)
         return fines[row][col]
 
-print(find_min_curr(n-1, m-1))
+
+def main():
+    print(find_min_curr(n-1, m-1))
+
+
+
+sys.setrecursionlimit(1 << 30)
+threading.stack_size(1 << 27)
+
+main_thread = threading.Thread(target=main)
+main_thread.start()
+main_thread.join()
