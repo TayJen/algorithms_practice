@@ -1,61 +1,40 @@
-from typing import List
+n = int(input())
+s1 = [int(i) for i in input().split(' ')]
+m = int(input())
+s2 = [int(i) for i in input().split(' ')]
 
+dp = []
 
-def find_solution(n: int, arr_1: List[int], m: int, arr_2: List[int]):
-    size = max(n, m) + 5
-    arr_1 = [0] + arr_1 + [0] * (size - n)
-    arr_2 = [0] + arr_2 + [0] * (size - m)
-    f, pre = [], []
-    for _ in range(size):
-        f.append([0] * size)
-        pre.append([0] * size)
+for _ in range(n + 1):
+    dp.append([0] * (m + 1))
 
-    for i in range(1, n+1):
-        fmax = 0
-        pos = 0
-        for j in range(1, m+1):
-            f[i][j], pre[i][j] = f[i-1][j], pre[i-1][j]
-            if arr_1[i] == arr_2[j]:
-                if f[i][j] < fmax + 1:
-                    f[i][j] = fmax + 1
-                    pre[i][j] = pos
-            if arr_1[i] > arr_2[j]:
-                if f[i-1][j] > fmax:
-                    fmax = f[i-1][j]
-                    pos = j
-
-    res = last = tot = 0
-    path = [0] * size
-
+# Find maximum
+for i in range(1, n+1):
     for j in range(1, m+1):
-        if res < f[n][j]:
-            res = f[n][j]
-            last = j
+        if s1[i-1] == s2[j-1]:
+            dp[i][j] = max(dp[i][j], dp[i-1][j-1] + 1)
+        dp[i][j] = max(dp[i][j], dp[i-1][j], dp[i][j-1])
 
-    print(res)
+print(dp[n][m])
 
-    i, j = n, last
-    while i or j:
-        if pre[i][j] != j:
-            tot += 1
-            path[tot] = arr_2[j]
-        j = pre[i][j]
+# for i in range(n+1):
+#     for j in range(m+1):
+#         print(dp[i][j], end=' ')
+#     print()
+
+# Restore answer
+answer = ""
+i, j = n, m
+while True:
+    if i == 0 or j == 0:
+        break
+    if s1[i-1] == s2[j-1]:
+        answer = str(s1[i-1]) + ' ' + answer
         i -= 1
+        j -= 1
+    elif dp[i-1][j] == dp[i][j]:
+        i -= 1
+    else:
+        j -= 1
 
-    while tot:
-        print(path[tot], end=' ')
-        tot -= 1
-
-
-def main():
-    n = int(input())
-    arr_1 = [int(i) for i in input().split(' ')]
-
-    m = int(input())
-    arr_2 = [int(i) for i in input().split(' ')]
-
-    find_solution(n, arr_1, m, arr_2)
-
-
-if __name__ == "__main__":
-    main()
+print(answer.strip())
