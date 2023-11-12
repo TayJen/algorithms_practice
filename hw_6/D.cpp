@@ -1,194 +1,140 @@
 #include <iostream>
-#include <cstdlib>
 #include <vector>
+#include <random>
+#include <ctime>
 
-using namespace std;
-
-
-// Узел декартового дерева по неявному ключу. Главное отличие - мы больше не храним
-// ключ в явном виде, вместо этого мы просто храним размер поддерева с корнем
-// в данном узле. Доступ к элементам дерева будет осуществляться по вычисляемому
-// "номеру" вершины, равному её порядковому номеру при прямом (Л-К-П) обходе.
-struct Node {
-    int y;   // Как и прежде, "приоритет" вершины
-    int sz;  // Хранимый размер поддерева
-
-    int val; // Хранимое значение в узле.
+struct ImplicitTreap {
+    int x;
+    int y;
+    ImplicitTreap* left;
+    ImplicitTreap* right;
+    int size;
     bool reversed;
 
-    Node *l, *r; // Указатели на левого и правого ребёнка
+    ImplicitTreap(int x, ImplicitTreap* left = nullptr, ImplicitTreap* right = nullptr) {
+        this->x = x;
+        this->y = rand();
+        this->left = left;
+        this->right = right;
+        this->size = 1;
+        this->reversed = false;
+    }
 };
 
-// Создание нового узла. Здесь мы должны инициализировать все поля узла, и при этом
-// мы вполне вольны разместить вершину там, где хотим. Для простоты пользуемся системным
-// выделителем памяти, однако одна из возможных оптимизаций - предвыделение всех необходимых
-// ресурсов и написание собственного (более простого/быстрого) выделителя.
-Node *new_node(int val)
-{
-    Node *result = new Node;
-    result->y = rand();
-    result->sz = 1;     // По сути, новый узел задаёт нам декартово дерево из одного узла,
-                        // и размер такого дерева будет равен 1.
-    result->val = val;
-    result->l = result->r = nullptr; // Не забываем указать, что у нового узла нет потомков
-    result->reversed = false;
-    return result;
-}
-
-// Получение размера поддерева. Функция гарантирует, что её выполнение не приведёт к ошибке
-// даже при передаче ей пустого дерева.
-int get_sz(Node *t)
-{
-    if (t == nullptr) { return 0; } // Полагаем размер пустого дерева равным нулю.
-    return t->sz; // Считаем, что размер поддерева поддерживается корректно
-}
-
-// Пересчёт размера поддерева. Эту операцию надо выполнять каждый раз, когда с деревом происходят
-// какие-либо изменения (то есть в любом split и merge) для поддержания корректности работы операций
-// над деревом.
-// Данная функция предполагает, что размеры потомков также являются корректными. Это обеспечивается
-// в операциях split и merge за счёт их рекуррентной природы (размеры будут пересчитываться от листьев
-// к корням после любого изменения)
-void upd_sz(Node *t)
-{
-    if (t == nullptr) { return; }
-    t->sz = 1 + get_sz(t->l) + get_sz(t->r);
-}
-
-
-void push(Node *t)
-{
-    if (t == nullptr) { return; }
-    if (t->reversed == false) { return; }
-    t->reversed = false;
-    
-    Node *temp;
-    temp = t->l;
-    t->l = t->r;
-    t->r = temp;
-
-    if (t->l != nullptr) { t->l->reversed ^= true; }
-    if (t->r != nullptr) { t->r->reversed ^= true; }
-}
-
-// Код операции слияния (merge) остаётся ровно таким же, как и для декартового дерева по явному ключу:
-// для неё важен только порядок вершины (y), мы же должны гарантировать соотношение значений ключей в
-// левом и правом поддеревьях, но, поскольку у нас явного ключа нет, у нас "автомагически" получится
-// верное дерево
-Node *merge(Node* t1, Node *t2)
-{
-    push(t1);
-    push(t2);
-    if (t1 == nullptr) { return t2; }
-    if (t2 == nullptr) { return t1; }
-    if (t1->y > t2->y)
-    {
-        t1->r = merge(t1->r, t2);
-        upd_sz(t1);
-        return t1;
-    }
-    else
-    {
-        t2->l = merge(t1, t2->l);
-        upd_sz(t2);
-        return t2;
+int get_size(ImplicitTreap* T) {
+    if (T == nullptr) {
+        return 0;
+    } else {
+        return T->size;
     }
 }
 
-// Разбиение дерева на два поддерева - одно с вершинами с порядковыми номерами [0..x), другое - [x..t->sz)
-// Здесь придётся делать небольшие изменения: например, поскольку ключа уже нет, надо уметь его вычислить, зная
-// размеры каждого поддерева.
-void split(Node *t, int x, Node *&t1, Node *&t2)
-{
-    push(t);
-    if (t == nullptr)
-    {
-        t1 = t2 = nullptr;
+void recalc(ImplicitTreap* T) {
+    if (T != nullptr) {
+        T->size = get_size(T->left) + get_size(T->right) + 1;
+    }
+}
+
+void push(ImplicitTreap* T) {
+    if (T == nullptr) {
         return;
     }
-    // Заметим, что порядковый номер текущей вершины в прямом обходе равен размеру её левого поддерева.
-    // (Действительно, ведь в прямом обходе мы должны сначала пройти всех левых детей, прежде чем вернёмся
-    // к корню). Следовательно, если размер текущего левого поддерева меньше, чем индекс разбиения, то
-    // оно целиком отправится в первое дерево, а разбивать нам надо будет правое поддерево.
-    if (get_sz(t->l) < x)
-    {
-        // Корень и всё левое поддерево должны отправиться в первое дерево-результат, а правое поддерево надо
-        // продолжить разбивать. Вот только индекс разбиения будет уже другим: корень и левое поддерево содержат
-        // get_sz(t->l) + 1 узел, и именно настолько надо уменьшить наш индекс разбиения.
-        split(t->r, x - get_sz(t->l) - 1, t->r, t2);
-        t1 = t;
+    if (!T->reversed) {
+        return;
     }
-    else
-    {
-        // Текущая вершина находится правее индекса разбиения, следовательно, она должна отправиться во
-        // второе дерево. При этом индекс разбиения трогать не нужно.
-        split(t->l, x, t1, t->l);
-        t2 = t;
+    T->reversed = false;
+    std::swap(T->left, T->right);
+    if (T->left != nullptr) {
+        T->left->reversed ^= true;
     }
-    upd_sz(t);
+    if (T->right != nullptr) {
+        T->right->reversed ^= true;
+    }
 }
 
-
-// Печать всего дерева. Просто обходим наше дерево как обычное бинарное дерево поиска,
-// вместо того, чтобы каждый раз пользоваться get_value.
-void print_tree(Node *t)
-{
-    push(t);
-    if (t == nullptr) { return; }
-    print_tree(t->l);
-    cout << t->val << " ";
-    print_tree(t->r);
+ImplicitTreap* merge(ImplicitTreap* L, ImplicitTreap* R) {
+    push(L);
+    push(R);
+    if (L == nullptr) {
+        return R;
+    }
+    if (R == nullptr) {
+        return L;
+    }
+    if (L->y > R->y) {
+        L->right = merge(L->right, R);
+        recalc(L);
+        return L;
+    } else {
+        R->left = merge(L, R->left);
+        recalc(R);
+        return R;
+    }
 }
 
-
-Node *reverse(Node *t, int a, int b)
-{
-    Node *l, *r, *m;
-    split(t, a - 1, l, r);
-    split(r, b - a + 1, m, r);
-
-    // std::cout << "DDDDEBUGGGG" << std::endl;
-    // print_tree(l);
-    // std::cout << std::endl;
-    // print_tree(m);
-    // std::cout << std::endl;
-    // print_tree(r);
-    // std::cout << std::endl;
-    // std::cout << "DDDDEBUGGGG" << std::endl;
-
-    m->reversed ^= true;
-    return merge(merge(l, m), r);
+std::pair<ImplicitTreap*, ImplicitTreap*> split(ImplicitTreap* T, int x0) {
+    push(T);
+    if (T == nullptr) {
+        return {nullptr, nullptr};
+    }
+    if (get_size(T->left) < x0) {
+        auto [L, R] = split(T->right, x0 - get_size(T->left) - 1);
+        T->right = L;
+        recalc(T);
+        return {T, R};
+    } else {
+        auto [L, R] = split(T->left, x0);
+        T->left = R;
+        recalc(T);
+        return {L, T};
+    }
 }
 
-// Создание дерева из массива - просто слияние текущего дерева с новыми деревьями, образованными из
-// элементов заданного массива. Для простоты упаковываем исходный массив в вектор.
-Node *from_N(int N)
-{
-    Node *result = nullptr;
-    for (int i = 1; i <= N; ++i)
-    {
-        result = merge(result, new_node(i));
+ImplicitTreap* reverse(ImplicitTreap* T, int A, int B) {
+    auto [L, R] = split(T, A - 1);
+    auto [M, R2] = split(R, B - A + 1);
+    M->reversed ^= true;
+    return merge(merge(L, M), R2);
+}
+
+void print_tree(ImplicitTreap* T) {
+    if (T == nullptr) {
+        return;
+    }
+    push(T);
+    print_tree(T->left);
+    std::cout << T->x << " ";
+    print_tree(T->right);
+}
+
+ImplicitTreap* from_list(const std::vector<int>& arr) {
+    ImplicitTreap* result = nullptr;
+    for (int val : arr) {
+        result = merge(result, new ImplicitTreap(val));
     }
     return result;
 }
 
-
 int main() {
-    int N, m;
-    std::cin >> N >> m;
-    Node *tree = from_N(N);
-    print_tree(tree);
-    std::cout << std::endl;
+    srand(time(nullptr));
 
-    int a, b;
-    for(int i = 1; i <= m; ++i)
-    {
-        std::cin >> a >> b;
-        reverse(tree, a, b);
-        print_tree(tree);
-        std::cout << std::endl;
+    int n, m;
+    std::cin >> n >> m;
+
+    std::vector<int> arr(n);
+    for (int i = 0; i < n; ++i) {
+        arr[i] = i + 1;
     }
-    print_tree(tree);
+
+    ImplicitTreap* main_T = from_list(arr);
+
+    while (m--) {
+        int a, b;
+        std::cin >> a >> b;
+        main_T = reverse(main_T, a, b);
+    }
+
+    print_tree(main_T);
 
     return 0;
 }

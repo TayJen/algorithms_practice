@@ -79,20 +79,8 @@ def reverse(T: ImplicitTreap, A: int, B: int) -> ImplicitTreap:
     # Split by left if A = 3, B = 7 <=> [1, 2, 3, 4, 5, 6, 7, 8] -> [1, 2, 3] & [4, 5, 6, 7, 8]
     L, R = split(T, A - 1)
 
-    # print('LEFT')
-    # print_tree(L)
-    # print()
-
     # Split by right [4, 5, 6, 7, 8, 9] -> [4, 5, 6, 7] & [8]
     M, R = split(R, B - A + 1)
-
-    # print('M')
-    # print_tree(M)
-    # print()
-    # print('RIGHT')
-    # print_tree(R)
-    # print()
-
     M.reversed ^= True
 
     return merge(merge(L, M), R)
@@ -114,34 +102,19 @@ def from_list(arr: List[int]) -> ImplicitTreap:
     return result
 
 
-# def add(T: Treap, x: int) -> Treap:
-#     y = random.randint(1, 150000)
-#     L, R = split(T, x)
-#     x_T = Treap(x, y)
-#     new_T = merge(merge(L, x_T), R)
-#     return new_T
-
-
-# def remove(T: Treap, x: int) -> Treap:
-#     L, R = split(T, x)
-#     L_no_x, _ = split(L, x-1)
-#     new_T = merge(L_no_x, R)
-#     return new_T
-
-
 if __name__ == "__main__":
     n, m = [int(i) for i in input().split(' ')]
     arr = [i for i in range(1, n+1)]
 
     main_T = from_list(arr)
-    print_tree(main_T)
-    print()
+    # print_tree(main_T)
+    # print()
 
     while m:
         a, b = map(int, sys.stdin.readline().split(' '))
         reverse(main_T, a, b)
-        print_tree(main_T)
-        print()
+        # print_tree(main_T)
+        # print()
         m -= 1
 
     print_tree(main_T)
